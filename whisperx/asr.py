@@ -22,6 +22,14 @@ def find_numeral_symbol_tokens(tokenizer):
             numeral_symbol_tokens.append(i)
     return numeral_symbol_tokens
 
+def get_silence_in_seconds(vad_segments: List[dict]):
+    prev = 0
+    silence = 0
+    for seg in vad_segments:
+        silence += seg['start'] - prev
+        prev = seg['end']
+    return silence
+
 class WhisperModel(faster_whisper.WhisperModel):
     '''
     FasterWhisperModel provides batched inference for faster-whisper.
@@ -175,6 +183,7 @@ class FasterWhisperPipeline(Pipeline):
     ) -> TranscriptionResult:
         if isinstance(audio, str):
             audio = load_audio(audio)
+        audio_len = len(audio)
 
         def data(audio, segments):
             for seg in segments:
@@ -190,6 +199,10 @@ class FasterWhisperPipeline(Pipeline):
             onset=self._vad_params["vad_onset"],
             offset=self._vad_params["vad_offset"],
         )
+        
+        silence = get_silence_in_seconds(vad_segments)
+        silence_in_seconds = silence * SAMPLE_RATE / audio_len
+        
         if self.tokenizer is None:
             language = language or self.detect_language(audio)
             task = task or "transcribe"
@@ -239,7 +252,7 @@ class FasterWhisperPipeline(Pipeline):
         if self.suppress_numerals:
             self.options = self.options._replace(suppress_tokens=previous_suppress_tokens)
 
-        return {"segments": segments, "language": language}
+        return {"segments": segments, "language": language, "silence": silence_in_seconds}
 
 
     def detect_language(self, audio: np.ndarray):
