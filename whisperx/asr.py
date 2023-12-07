@@ -80,7 +80,7 @@ class WhisperModel(faster_whisper.WhisperModel):
         )
 
         tokens_batch = []
-        avg_logprobs = []
+        avg_probs = []
         for res in result:
             tokens = res.sequences_ids[0]
             tokens_batch.append(tokens)
@@ -89,7 +89,8 @@ class WhisperModel(faster_whisper.WhisperModel):
             seq_len = len(tokens)
             cum_logprob = res.scores[0] * (seq_len**options.length_penalty)
             avg_logprob = cum_logprob / (seq_len + 1)
-            avg_logprobs.append(avg_logprob)
+            avg_prob = torch.exp(torch.tensor(avg_logprob)).item()
+            avg_probs.append(avg_prob)
 
         def decode_batch(tokens: List[List[int]]) -> str:
             res = []
@@ -99,7 +100,7 @@ class WhisperModel(faster_whisper.WhisperModel):
 
         text = decode_batch(tokens_batch)
 
-        return {"text": text, "avg_logprobs": avg_logprobs}
+        return {"text": text, "avg_probs": avg_probs}
 
     def encode(self, features: np.ndarray) -> ctranslate2.StorageView:
         # When the model is running on multiple GPUs, the encoder output should be moved
@@ -300,15 +301,15 @@ class FasterWhisperPipeline(Pipeline):
                 )
                 print(f"Progress: {percent_complete:.2f}%...")
             text = out["text"]
-            avg_logprobs = out["avg_logprobs"]
+            avg_prob = out["avg_probs"]
 
             if batch_size in [0, 1, None]:
                 text = text[0]
-                avg_logprobs = avg_logprobs[0]
+                avg_prob = avg_prob[0]
             segments.append(
                 {
                     "text": text,
-                    "avg_logprob": avg_logprobs,
+                    "avg_prob": avg_prob,
                     "start": round(vad_segments[idx]["start"], 3),
                     "end": round(vad_segments[idx]["end"], 3),
                 }
