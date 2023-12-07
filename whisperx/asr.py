@@ -69,18 +69,29 @@ class WhisperModel(faster_whisper.WhisperModel):
                 suppress_tokens=options.suppress_tokens,
             )
 
-        tokens_batch = [x.sequences_ids[0] for x in result]
+        tokens_batch = []
+        avg_logprobs = []
+        for res in result:
+            tokens = res.sequence_ids[0]
+            tokens_batch.append(tokens)
+            
+            # Calculate average logprob
+            seq_len = len(tokens)
+            cum_logprob = res.scores[0] * (seq_len ** options.length_penalty)
+            avg_logprob = cum_logprob / (seq_len + 1)
+            avg_logprobs.append(avg_logprob)
+        
+        
 
         def decode_batch(tokens: List[List[int]]) -> str:
             res = []
             for tk in tokens:
                 res.append([token for token in tk if token < tokenizer.eot])
-            # text_tokens = [token for token in tokens if token < self.eot]
             return tokenizer.tokenizer.decode_batch(res)
 
         text = decode_batch(tokens_batch)
 
-        return text
+        return {"text": text, "avg_logprobs": avg_logprobs}
 
     def encode(self, features: np.ndarray) -> ctranslate2.StorageView:
         # When the model is running on multiple GPUs, the encoder output should be moved
@@ -157,8 +168,8 @@ class FasterWhisperPipeline(Pipeline):
         return {'inputs': features}
 
     def _forward(self, model_inputs):
-        outputs = self.model.generate_segment_batched(model_inputs['inputs'], self.tokenizer, self.options)
-        return {'text': outputs}
+        return self.model.generate_segment_batched(model_inputs['inputs'], self.tokenizer, self.options)
+
 
     def postprocess(self, model_outputs):
         return model_outputs
@@ -234,11 +245,15 @@ class FasterWhisperPipeline(Pipeline):
                 percent_complete = base_progress / 2 if combined_progress else base_progress
                 print(f"Progress: {percent_complete:.2f}%...")
             text = out['text']
+            avg_logprobs = out['avg_logprobs']
+            
             if batch_size in [0, 1, None]:
                 text = text[0]
+                avg_logprobs = avg_logprobs[0]
             segments.append(
                 {
                     "text": text,
+                    "avg_logprob": avg_logprobs,
                     "start": round(vad_segments[idx]['start'], 3),
                     "end": round(vad_segments[idx]['end'], 3)
                 }

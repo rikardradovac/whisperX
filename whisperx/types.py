@@ -26,6 +26,7 @@ class SingleSegment(TypedDict):
     """
 
     start: float
+    avg_logprob: float
     end: float
     text: str
 
