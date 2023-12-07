@@ -82,7 +82,7 @@ class WhisperModel(faster_whisper.WhisperModel):
         tokens_batch = []
         avg_logprobs = []
         for res in result:
-            tokens = res.sequence_ids[0]
+            tokens = res.sequences_ids[0]
             tokens_batch.append(tokens)
 
             # Calculate average logprob
