@@ -106,28 +106,20 @@ class WhisperModel(faster_whisper.WhisperModel):
             avg_prob = torch.exp(torch.tensor(avg_logprob)).item()
             avg_probs.append(avg_prob)
         
-        segment_sizes = []
-        for tokens in tokens_batch:
-            # get all the segment sizes for each batch
-            content_frames = features.shape[-1]
-            segment_size = min(
-                    self.feature_extractor.nb_max_frames, content_frames
-                )
-            segment_sizes.append(segment_size)
+        if options.word_timestamps:
+            segment_sizes = []
+            for tokens in tokens_batch:
+                # get all the segment sizes for each batch
+                content_frames = features.shape[-1]
+                segment_size = min(
+                        self.feature_extractor.nb_max_frames, content_frames
+                    )
+                segment_sizes.append(segment_size)
 
-        print("tokens_batch", len(tokens_batch))
-        print(tokens_batch)
-        print("segment_size", segment_size)
-        print("content_frames", content_frames)
-        print("nb_max_frames", self.feature_extractor.nb_max_frames)
-        print("features.shape", features.shape)
-
-        st = time.time()
-        # align the batches to get word timestamps
-        alignments = self.find_alignment(tokenizer=tokenizer, tokens_batch=tokens_batch, encoder_output=encoder_output, num_frames=segment_sizes)
-        print(time.time() - st)
-        print(alignments)
-        print("finished")
+            # align the batches to get word timestamps
+            alignments = self.find_alignment(tokenizer=tokenizer, tokens_batch=tokens_batch, encoder_output=encoder_output, num_frames=segment_sizes)
+        else:
+            alignments = None
         text = decode_batch(tokens_batch)
         return {"text": text, "avg_probs": avg_probs, "alignments": alignments}
 
@@ -318,11 +310,14 @@ class FasterWhisperPipeline(Pipeline):
         chunk_size=30,
         print_progress=False,
         combined_progress=False,
+        word_timestamps=False,
     ) -> TranscriptionResult:
         if isinstance(audio, str):
             audio = load_audio(audio)
         audio_len = len(audio)
 
+        # add word_timestamp to options (dict)
+        self.options = self.options._replace(word_timestamps=word_timestamps)
         def data(audio, segments):
             for seg in segments:
                 f1 = int(seg["start"] * SAMPLE_RATE)
@@ -397,15 +392,16 @@ class FasterWhisperPipeline(Pipeline):
 
             starting_time = round(vad_segments[idx]["start"], 3)
 
-            for i in range(len(alignment)):
-                # add starting time to each word as the words start at 0 at each segment
-                alignment[i]["start"] += starting_time
-                alignment[i]["end"] += starting_time
-
-        
             if batch_size in [0, 1, None]:
                 text = text[0]
                 avg_prob = avg_prob[0]
+                alignment = alignment[0]
+            
+            if alignment is not None:
+                for i in range(len(alignment)):
+                    # add starting time to each word as the words start at 0 at each segment
+                    alignment[i]["start"] += starting_time
+                    alignment[i]["end"] += starting_time
 
             segments.append(
                 {
