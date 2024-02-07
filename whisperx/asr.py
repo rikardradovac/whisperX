@@ -311,6 +311,7 @@ class FasterWhisperPipeline(Pipeline):
         print_progress=False,
         combined_progress=False,
         word_timestamps=False,
+        initial_prompt=None,
     ) -> TranscriptionResult:
         if isinstance(audio, str):
             audio = load_audio(audio)
@@ -318,6 +319,7 @@ class FasterWhisperPipeline(Pipeline):
 
         # add word_timestamp to options (dict)
         self.options = self.options._replace(word_timestamps=word_timestamps)
+        self.options = self.options._replace(initial_prompt=initial_prompt)
         def data(audio, segments):
             for seg in segments:
                 f1 = int(seg["start"] * SAMPLE_RATE)
