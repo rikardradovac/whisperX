@@ -255,8 +255,6 @@ class WhisperModel(faster_whisper.WhisperModel):
                 # ensure words at sentence boundaries
                 # are not longer than twice the median word duration.
                 for i in range(1, len(alignment)):
-                    if alignment[i]["tokens"] == [19664, 301]:
-                        print("this is weird alignemnt", alignment)
                     if alignment[i]["end"] - alignment[i]["start"] > max_duration:
                         if alignment[i]["word"] in sentence_end_marks:
                             alignment[i]["end"] = alignment[i]["start"] + max_duration
