@@ -134,8 +134,8 @@ def log_mel_spectrogram(
 
     Returns
     -------
-    torch.Tensor, shape = (80, n_frames)
-        A Tensor that contains the Mel spectrogram
+    tuple(torch.Tensor, shape) = ((80, n_frames), int)
+        A Tensor that contains the Mel spectrogram and a scalar that indicates the number of padded frames
     """
     if not torch.is_tensor(audio):
         if isinstance(audio, str):
@@ -144,6 +144,7 @@ def log_mel_spectrogram(
 
     if device is not None:
         audio = audio.to(device)
+    original_length = audio.shape[-1]  # Get the original length of the audio tensor
     if padding > 0:
         audio = F.pad(audio, (0, padding))
     window = torch.hann_window(N_FFT).to(audio.device)
@@ -156,4 +157,9 @@ def log_mel_spectrogram(
     log_spec = torch.clamp(mel_spec, min=1e-10).log10()
     log_spec = torch.maximum(log_spec, log_spec.max() - 8.0)
     log_spec = (log_spec + 4.0) / 4.0
-    return log_spec
+
+    # Calculate the number of samples padded at the return
+    padded_length = audio.shape[-1] - original_length
+    padded_frames = np.ceil(padded_length / HOP_LENGTH)
+
+    return log_spec, padded_frames
