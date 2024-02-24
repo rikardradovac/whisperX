@@ -617,7 +617,7 @@ def load_model(
         "append_punctuations": "\"'.。,，!！?？:：”)]}、",
         "suppress_numerals": False,
         "max_new_tokens": None,
-        "clip_timesamps": None,
+        "clip_timestamps": None,
         "hallucination_silence_threshold": None,
     }
 
