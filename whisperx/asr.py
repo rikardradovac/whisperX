@@ -616,6 +616,9 @@ def load_model(
         "prepend_punctuations": "\"'“¿([{-",
         "append_punctuations": "\"'.。,，!！?？:：”)]}、",
         "suppress_numerals": False,
+        "max_new_tokens": None,
+        "clip_timesamps": None,
+        "hallucination_silence_threshold": None,
     }
 
     if asr_options is not None:
