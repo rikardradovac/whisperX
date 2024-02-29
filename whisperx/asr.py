@@ -121,7 +121,6 @@ class WhisperModel(faster_whisper.WhisperModel):
             max_length=self.max_length,
             suppress_blank=options.suppress_blank,
             suppress_tokens=options.suppress_tokens,
-            sampling_temperature=options.temperatures[0],
         )
 
         tokens_batch = []
