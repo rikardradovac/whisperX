@@ -389,6 +389,29 @@ class FasterWhisperPipeline(Pipeline):
 
         return final_iterator
 
+    def calculate_audio_silence(self, audio: str):
+        audio = load_audio(audio)
+        audio_len = len(audio)
+        vad_segments = self.vad_model(
+            {
+                "waveform": torch.from_numpy(audio).unsqueeze(0),
+                "sample_rate": SAMPLE_RATE,
+            }
+        )
+
+        vad_segments = merge_chunks(
+            vad_segments,
+            30,
+            onset=self._vad_params["vad_onset"],
+            offset=self._vad_params["vad_offset"],
+        )
+
+        silence = get_silence_in_seconds(vad_segments)
+        silence_in_seconds = silence * SAMPLE_RATE / audio_len
+
+        return {"silence": silence,
+                "silence_percentage": silence_in_seconds}
+
     def transcribe(
         self,
         audio: Union[str, np.ndarray],
