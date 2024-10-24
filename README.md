@@ -26,13 +26,9 @@
 <img width="1216" align="center" alt="whisperx-arch" src="figures/pipeline.png">
 
 
-<!-- <p align="left">Whisper-Based Automatic Speech Recognition (ASR) with improved timestamp accuracy + quality via forced phoneme alignment and voice-activity based batching for fast inference.</p> -->
-
-
-<!-- <h2 align="left", id="what-is-it">What is it 🔎</h2> -->
-
 
 This repository provides fast automatic speech recognition (70x realtime with large-v2) with word-level timestamps and speaker diarization.
+This fork provides more data about the input file along with the transcription.
 
 - ⚡️ Batched inference for 70x realtime transcription using whisper large-v2
 - 🪶 [faster-whisper](https://github.com/guillaumekln/faster-whisper) backend, requires <8GB gpu memory for large-v2 with beam_size=5
